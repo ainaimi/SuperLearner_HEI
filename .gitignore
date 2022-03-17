@@ -1,2 +1,4 @@
-./manuscript/*
-./data/*
+manuscript/
+data/
+.Rproj.user
+*.Rproj
