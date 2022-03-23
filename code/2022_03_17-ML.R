@@ -1,5 +1,5 @@
 packages <- c("data.table","tidyverse","skimr","here","remotes",
-              "SuperLearner","glmnet","ranger","origami")
+              "SuperLearner","glmnet","ranger","origami","caret")
 
 for (package in packages) {
   if (!require(package, character.only=T, quietly=T)) {
@@ -22,15 +22,44 @@ thm <- theme_classic() +
   )
 theme_set(thm)
 
-mydata <- read.csv("I:\\Bodnar Julie\\numom750.csv")
+## WARNING! THIS NEEDS TO BE CHANGED
+if(Sys.info()["nodename"]=="EPIC02G44CTQ05P"|Sys.info()["nodename"]=="EPI9TPH7M3"){
+  a <- read_csv(here("data","numom750.csv"))
+  a_scaled <- read_csv(here("data","2022_03_18-scaled_hei.csv"))
+} else{
+  mydata <- read.csv("I:\\Bodnar Julie\\numom750.csv")  
+}
 
-covars <- c("heiy10_sodium", "heiy11_refinedgrain",  "heiy12_addsug",  "heiy13_sfa",  
-"heiy1_totalveg", "heiy2_green_and_bean", "heiy3_totalfruit", "heiy4_wholefruit",  
-"heiy5_wholegrain",  "heiy6_totaldairy",  "heiy7_totprot",  "heiy8_seaplant_prot", 
-"heiy9_fattyacid")
+names(a)
+names(a_scaled)
+
+sl3_list_learners(c("binomial"))
+
+covars <- names(a_scaled)
+mydata <- cbind(tibble(ptb37 = a$ptb37),a_scaled)
+
+head(mydata)
+
+# create training and testing data
+set.seed(123)
+y = factor(mydata$ptb37)
+
+index <- createDataPartition(
+  y,
+  times = 1,
+  p = .7,
+  list = TRUE,
+  groups = min(5, length(y))
+)
+
+train <- mydata[index$Resample1,]
+test <- mydata[-index$Resample1,]
+
+nrow(test)
+nrow(train)
 
 task <- sl3_Task$new(
-  data = mydata,
+  data = train,
   covariates = covars,
   outcome = "ptb37"
   )
@@ -46,7 +75,6 @@ learner_stack <- Stack$new(SL.glmnet_learner, glm_learner, SL.ranger, SL.mean)
 stack_fit <- learner_stack$train(task)
 preds <- stack_fit$predict()
 head(preds)
-
 
 #TO DOs
 #1 - Cross validation settings
